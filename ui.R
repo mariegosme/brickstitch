@@ -54,8 +54,8 @@ ui <- tabsetPanel(
         numericInput("nc", "Nombre de colonnes", 10, min = 1),
         actionButton("newGrid", "Nouvelle grille"),
         hr(),
-        downloadButton("savePattern", "Enregistrer (.txt)"),
-        fileInput("loadPattern", "Charger un pattern")
+        fileInput("loadPattern", "Charger un pattern"),
+        downloadButton("savePattern", "Enregistrer (.txt)")
       ),
       
       column(

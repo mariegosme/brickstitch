@@ -66,7 +66,8 @@ function(input, output, session) {
     colorLabels = c("#FFFFFF"),
     selectedCells = matrix(ncol = 2, nrow = 0),
     selectedColor = NULL,
-    editLabelIdx=0,
+    editLabelIdx=NULL,
+    editColIdx = NULL,
     brushTrigger = 0,
     history = list()          # pour CTRL+Z
   )
@@ -222,6 +223,7 @@ function(input, output, session) {
     idx <- n - floor(y)
     
     if (x<1){ #clique sur couleur => change couleur
+      rv$editColIdx <- idx
       showModal(modalDialog(
         colourInput("editCol","Changer de couleur",
                     value = rv$colorList[idx]),
@@ -229,13 +231,6 @@ function(input, output, session) {
           actionButton("confirmEdit","OK")
         )
       ))
-      
-      observeEvent(input$confirmEdit, {
-        print(paste("editing color", idx))
-        rv$colorList[idx] <- input$editCol
-        removeModal()
-        
-      }, once = TRUE)
     } else { #click nom legende
       rv$editLabelIdx <- idx 
       showModal(modalDialog(
@@ -248,6 +243,15 @@ function(input, output, session) {
       
     }
   })
+
+observeEvent(input$confirmEdit, {
+  req(rv$editColIdx)
+  idx<-rv$editColIdx
+  print(paste("editing color", idx))
+  rv$colorList[idx] <- input$editCol
+  rv$editColIdx <- NULL
+  removeModal()
+})
   
   observeEvent(input$confirmEditLab, {
     req(rv$editLabelIdx)
@@ -257,6 +261,7 @@ function(input, output, session) {
     toto[idx]<-input$editLab
     print(toto)
     rv$colorLabels <- toto
+    rv$editLabelIdx <- NULL
     removeModal()
   })
   
@@ -279,22 +284,25 @@ function(input, output, session) {
   output$colorList<-renderText(paste(paste(rv$colorLabels, rv$colorList, sep="="), collapse=","))
   output$selectedColor<-renderText(paste("selected=,", paste(rv$selectedColor, collapse=",")))
   
-  output$savePattern <- downloadHandler(
-    filename = "pattern.txt", content = function(file) {
-      req(rv$pattern)
-      write.table(as.data.frame(matrix(rv$colorNames, nrow=1)), file, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
-      write.table(as.data.frame(matrix(rv$colorList, nrow=1)), file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
-      
-      write.table(
-        rv$pattern,
-        file,
-        append=TRUE,
-        row.names=FALSE,
-        col.names=FALSE,
-        sep="\t"
-      )
-    })
   
+  output$savePattern<-downloadHandler(
+    filename = function() {
+      paste0("pattern_", Sys.time(), ".txt")
+    },
+    content = function(file) {
+      print("save pattern onglet 2")
+      req(rv$pattern)
+      req(rv$colorList)
+      req(rv$colorLabels)
+      pat<-rv$pattern
+      listecol<-rv$colorList
+      names(listecol)<-rv$colorLabels
+      print(listecol)
+      write.table(as.data.frame(matrix(names(listecol), nrow=1)), file, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+      write.table(as.data.frame(matrix(listecol, nrow=1)), file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+      write.table(pat, file, append=TRUE, row.names=FALSE,col.names=FALSE,sep="\t")
+    })
+
   observeEvent(input$loadPattern, {
     
     f <- input$loadPattern$datapath
